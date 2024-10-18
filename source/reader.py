@@ -27,6 +27,11 @@ file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
 print(file_batch.status)
 print(file_batch.file_counts)
 
+vector_store_files = client.beta.vector_stores.files.list(vector_store_id=vector_store_id)
+
+for file in vector_store_files.data:
+    print(f"File ID: {file.id}")
+
 assistant = client.beta.assistants.update(
     assistant_id=assistant_id,
     tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}},
@@ -74,3 +79,12 @@ if run.status == "completed":
         print("No content found in the messages.")
 else:
     print(f"Run status: {run.status}")
+
+# Delete files from the vector store after the conversation is complete
+for file in vector_store_files.data:
+    deleted_vector_store_file = client.beta.vector_stores.files.delete(
+        vector_store_id=vector_store_id,
+        file_id=file.id
+    )
+    print(f"Deleted file: {file.id}")
+
