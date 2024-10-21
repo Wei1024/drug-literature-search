@@ -8,8 +8,8 @@ def process_question(message_content, file_paths):
 
     client = OpenAI(api_key=openai_api_key)
 
-    vector_store_id = "vs_CZ8iQ33pren9nJCVmJWYAIKU"
-    assistant_id = "asst_irHZYkP29dGAn684wP0CIM6D"
+    vector_store_id = os.getenv("VECTOR_STORE_ID")
+    assistant_id = os.getenv("ASSISTANT_ID")
 
     file_streams = [open(path, "rb") for path in file_paths]
 
