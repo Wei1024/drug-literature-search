@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 1. Create an openai api key through their website
 2. In the OpenAI API dashboard, create an Assistant and enable the file search function, then attach a vectorstore to it
-3. Replace the example with actual api key and IDs in the .env file
+3. Replace the example with actual api key and IDs in the .env_example file and remove the _example in the file name
 
 ### 5. Run the App
 
