@@ -1,6 +1,53 @@
-import streamlit as st
+import os
 import requests
+import shutil
+import streamlit as st
 import pandas as pd
+from bs4 import BeautifulSoup
+from pathlib import Path
+from urllib.parse import urljoin
+from source.reader import process_question
+
+# Function to download a PDF file
+def download_pdf(url, destination_folder):
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        filename = os.path.join(destination_folder, url.split("/")[-1])
+        with open(filename, 'wb') as f:
+            response.raw.decode_content = True
+            shutil.copyfileobj(response.raw, f)
+        return filename
+    else:
+        return None
+
+def download_from_cfm(url, destination_folder):
+    response = requests.get(url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Assuming that the PDF link is inside <a> tags
+        pdf_links = soup.find_all('a', href=True)
+        downloaded_files = []
+        for link in pdf_links:
+            href = link['href']
+            if href.endswith(".pdf"):
+                # Use urljoin to handle relative URLs correctly
+                pdf_url = urljoin(url, href)
+                pdf_filename = download_pdf(pdf_url, destination_folder)
+                if pdf_filename:
+                    downloaded_files.append(pdf_filename)
+        return downloaded_files
+    return None
+
+
+# Create a temporary directory
+tmp_dir = Path("tmp")
+tmp_dir.mkdir(parents=True, exist_ok=True)
+
+# Function to cleanup the tmp folder
+def cleanup_tmp_folder(folder_path):
+    if folder_path.exists() and folder_path.is_dir():
+        shutil.rmtree(folder_path)
+        #st.write("Temporary files cleaned up.")
 
 # Set page configuration
 st.set_page_config(
@@ -29,7 +76,7 @@ st.sidebar.info(
 
 # Input form
 with st.form(key='drug_form'):
-    brand_name_input = st.text_input("Enter Drug Brand Name", value="", placeholder="e.g., Advil")
+    brand_name_input = st.text_input("Enter Drug Brand Name", value="", placeholder="e.g., Opdivo")
     submit_button = st.form_submit_button(label='Search')
 
 # Initialize session state to hold the fetched data
@@ -139,3 +186,53 @@ if st.session_state.submission_data is not None:
             file_name=f"{brand_name_input}_Selected_FDA_ORIG_Submissions.csv",
             mime='text/csv',
         )
+        message_content = st.text_area("Enter the message content for processing:", value="")
+
+        # Inside the "Process Application Documents" button
+        if st.button("Process Application Documents"):
+            downloaded_files = []
+            for _, row in filtered_df.iterrows():
+                doc_url = row["Application Documents"]
+                if doc_url.endswith(".pdf"):
+                    st.write(f"Downloading PDF from {doc_url}...")
+                    downloaded_file = download_pdf(doc_url, tmp_dir)
+                    if downloaded_file:
+                        st.write(f"Downloaded: {downloaded_file}")
+                        downloaded_files.append(downloaded_file)
+                    else:
+                        st.write(f"Failed to download {doc_url}")
+                elif doc_url.endswith(".cfm"):
+                    st.write(f"Scraping and downloading PDFs from {doc_url}...")
+                    scraped_files = download_from_cfm(doc_url, tmp_dir)
+                    if scraped_files:
+                        for file in scraped_files:
+                            st.write(f"Downloaded: {file}")
+                        downloaded_files.extend(scraped_files)
+                    else:
+                        st.write(f"No PDF links found or failed to download from {doc_url}.")
+
+            if downloaded_files:
+                if message_content.strip():
+                    try:
+                        # Call the process_question function and capture results
+                        processed_content, citations = process_question(message_content, downloaded_files)
+                        
+                        # Display the results in Streamlit
+                        st.subheader("Results from AI")
+                        st.markdown(processed_content)
+
+                        if citations:
+                            st.subheader("Citations")
+                            for citation in citations:
+                                st.markdown(citation)
+                        
+                    except Exception as e:
+                        st.error(f"An error occurred during processing: {e}")
+                    finally:
+                        # Clean up the temporary folder after processing
+                        cleanup_tmp_folder(tmp_dir)
+                else:
+                    st.warning("Please enter a valid message content.")
+            else:
+                # Clean up the temporary folder if no files were downloaded
+                cleanup_tmp_folder(tmp_dir)
