@@ -1,6 +1,9 @@
 
 # FDA Drug Submission Lookup App
 
+## Demonstration video
+[Link to the demonstration video on Youtube](https://youtu.be/q-sl7500TSo)
+
 ## Overview
 
 This app allows users to search for a drug's FDA submission by entering the drug's brand name. Once a query is made, the app retrieves FDA-documented reviews on the drug's submission. Users can then select documents they wish to review and ask specific questions, such as "Do they conduct any research on children population?" The app utilizes OpenAI's Assistant API with a File Search function to screen and evaluate documents, even those containing difficult medical terms, to provide insightful answers.
