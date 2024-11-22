@@ -1,2 +1,9 @@
+<<<<<<< HEAD
 streamlit==1.39.0
 openai==1.51.2
+=======
+openai==1.51.2
+streamlit==1.39.0
+python-dotenv==1.0.1
+beautifulsoup4==4.12.3
+>>>>>>> f8e563d1cedd50eecb42c1ddf8257e259b0f92f7
