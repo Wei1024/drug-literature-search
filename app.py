@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from source.reader import process_question
 from source.utilities import download_pdf, download_from_cfm
+import time
 
 # Create a temporary directory
 tmp_dir = Path("tmp")
@@ -16,8 +17,38 @@ tmp_dir.mkdir(parents=True, exist_ok=True)
 # Function to cleanup the tmp folder
 def cleanup_tmp_folder(folder_path):
     if folder_path.exists() and folder_path.is_dir():
-        shutil.rmtree(folder_path)
-        #st.write("Temporary files cleaned up.")
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for retry in range(max_retries):
+            try:
+                for root, dirs, files in os.walk(folder_path):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        try:
+                            os.chmod(file_path, 0o777)  # Ensure we have permission to delete
+                            os.unlink(file_path)
+                        except Exception as e:
+                            print(f"Error deleting file {file_path}: {e}")
+                            continue
+                    for dir in dirs:
+                        dir_path = os.path.join(root, dir)
+                        try:
+                            os.rmdir(dir_path)
+                        except Exception as e:
+                            print(f"Error deleting directory {dir_path}: {e}")
+                            continue
+                try:
+                    os.rmdir(folder_path)
+                except Exception as e:
+                    print(f"Error deleting root directory {folder_path}: {e}")
+                break  # If we get here, cleanup was successful
+            except Exception as e:
+                if retry < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f"Failed to cleanup temporary folder after {max_retries} attempts: {e}")
 
 # Set page configuration
 st.set_page_config(
